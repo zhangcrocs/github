@@ -1,0 +1,107 @@
+zabbix-server-mysql
+zabbix-web-nginx-mysql
+zabbix-java-gateway
+
+cd /data/cert
+openssl req -x509 -new -nodes -sha512 -days 3650 \
+    -subj "/C=CN/ST=Beijing/L=Beijing/O=chinatelecom/OU=ecloudcaas/CN=192.168.200.144" \
+    -key ca.key \
+    -out ca.crt
+
+cd /data/cert
+openssl req -sha512 -new \
+    -subj "/C=CN/ST=Beijing/L=Beijing/O=chinatelecom/OU=ecloudcaas/CN=192.168.200.144" \
+    -key 192.168.200.144.key \
+    -out 192.168.200.144.csr 
+
+
+cat > v3.ext <<-EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth 
+subjectAltName = @alt_names
+[alt_names]
+IP=192.168.200.144
+EOF
+
+
+
+openssl x509 -req -sha512 -days 3650 \
+    -extfile v3.ext \
+    -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -in 192.168.200.144.csr \
+    -out 192.168.200.144.crt
+
+
+mkdir -p /etc/docker/cert/192.168.200.144
+cp /data/cert/192.168.200.144.cert /etc/docker/cert/192.168.200.144/
+cp /data/cert/192.168.200.144.key /etc/docker/cert/192.168.200.144/
+cp /data/cert/ca.crt /etc/docker/cert/192.168.200.144/
+
+
+
+
+cat > /etc/docker/daemon.json << EOF
+{ "insecure-registries":["http://192.168.200.144"] }
+EOF
+
+
+service:
+  db:
+version: '3'
+
+service:
+  db:
+    image: mysql:5.6
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+version: '3'
+
+service:
+  db:
+    image: mysql:5.6
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    volumes:
+      - web_data:/var/www/html
+Connection closed by foreign host.
+      - "80:80"
+Disconnected from remote host(docker) at 12:19:04.
+    WORDPRESS_DB_HOST: DB:3306
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
